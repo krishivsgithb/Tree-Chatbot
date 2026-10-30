@@ -1,0 +1,159 @@
+.field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.field-label {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+.vr {
+  width: 1px;
+  height: 28px;
+  background: var(--border);
+}
+.accent {
+  color: var(--accent);
+}
+.grow {
+  flex: 1;
+}
+
+.menu-wrap {
+  position: relative;
+}
+.provider-btn,
+.model-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 6px;
+  margin-left: -6px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color var(--dur-fast) var(--ease);
+}
+.provider-btn:hover,
+.model-btn:hover {
+  background: var(--surface-2);
+}
+.model-btn svg {
+  color: var(--text-muted);
+}
+.chev {
+  color: var(--text-muted);
+  transition: transform var(--dur) var(--ease);
+}
+.chev.open {
+  transform: rotate(180deg);
+}
+.model-input {
+  width: 190px;
+  padding: 3px 8px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: -6px;
+  z-index: 30;
+  width: 240px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  animation: slide-down var(--dur) var(--ease) both;
+}
+.menu-title {
+  padding: 6px 8px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 8px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  transition: background-color var(--dur-fast) var(--ease);
+}
+.menu-item:hover {
+  background: var(--surface-2);
+}
+.menu-item.active {
+  background: var(--accent-soft);
+}
+.menu-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.menu-foot {
+  margin-top: 6px;
+  padding: 8px 8px 4px;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  font-size: 13px;
+}
+.chip .ok {
+  color: var(--success);
+}
+.chip-muted {
+  color: var(--text-muted);
+}
+.link-btn {
+  padding: 4px 6px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--accent);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
+}
+.link-btn:hover {
+  background: var(--accent-soft);
+}
+.link-btn:active {
+  transform: scale(0.96);
+}
+.link-btn.muted {
+  color: var(--text-muted);
+}
+.link-btn.muted:hover {
+  color: var(--danger);
+  background: var(--danger-soft);
+}
+/* Keep the top bar (and its dropdowns) above the canvas */
+.topbar {
+  position: relative;
+  z-index: 20;
+}
