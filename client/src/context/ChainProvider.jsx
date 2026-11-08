@@ -17,6 +17,7 @@ export function ChainProvider({ rootId, children }) {
   const [banner, setBanner] = useState(null);
   const [saves, setSaves] = useState({ inflight: 0, failed: false });
   const [confirmId, setConfirmId] = useState(null);
+  const [focusId, setFocusId] = useState(rootId); // the card shown on mobile
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState('');
   
@@ -205,6 +206,7 @@ export function ChainProvider({ rootId, children }) {
         { ...created, selected: true }
       ]);
       updateChat(rootId, (c) => ({ nodeCount: c.nodeCount + 1 }));
+      setFocusId(created.id);
       // Wait a moment so the new card is measured, then bring it into view
       setTimeout(
         () => fitView({ nodes: [{ id: created.id }], duration: 400, maxZoom: 1, padding: 0.4 }),
@@ -236,6 +238,7 @@ export function ChainProvider({ rootId, children }) {
         ns.filter((n) => n.id !== id).map((n) => ({ ...n, selected: n.id === res.newTipId }))
       );
       updateChat(rootId, (c) => ({ nodeCount: Math.max(1, c.nodeCount - 1) }));
+      setFocusId(res.newTipId);
       setConfirmId(null);
     } catch (e) {
       setDeleteError(e.message);
@@ -255,6 +258,8 @@ export function ChainProvider({ rootId, children }) {
     banner,
     dismissBanner,
     saves,
+    focusId,
+    setFocusId,
     onNodesChange,
     savePosition,
     setDraft,

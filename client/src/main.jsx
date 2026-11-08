@@ -13,6 +13,7 @@ import './styles/sidebar.css';
 import '@xyflow/react/dist/style.css';
 import './styles/canvas.css';
 import './styles/menu.css';
+import './styles/mobile.css';
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

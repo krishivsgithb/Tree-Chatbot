@@ -64,3 +64,20 @@ export function describeError(e, label) {
       return { title: 'Something went wrong', message: e.message };
   }
 }
+// Cards in reading order: each parent, then its branches (depth-first)
+export function orderNodes(nodes) {
+  const kids = new Map();
+  nodes.forEach((n) => {
+    const key = n.data.parentId || 'root';
+    if (!kids.has(key)) kids.set(key, []);
+    kids.get(key).push(n);
+  });
+  const out = [];
+  const walk = (key) =>
+    (kids.get(key) || []).forEach((n) => {
+      out.push(n);
+      walk(n.id);
+    });
+  walk('root');
+  return out;
+}

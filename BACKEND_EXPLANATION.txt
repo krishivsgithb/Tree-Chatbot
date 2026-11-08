@@ -1,0 +1,202 @@
+================================================================================
+TREE CHATBOT: BACKEND ARCHITECTURE & THEORETICAL CONCEPTS SPECIFICATION
+================================================================================
+
+1. EXECUTIVE SUMMARY & CORE CONCEPT
+--------------------------------------------------------------------------------
+Tree Chatbot is a non-linear, graph-based conversational AI platform. Unlike 
+traditional conversational interfaces (e.g., ChatGPT, Claude threads) that enforce
+a strictly 1-dimensional, linear sequence of messages (a linked list of turns),
+Tree Chatbot models conversations as a Directed Tree / Directed Acyclic Graph (DAG)
+of conversational nodes displayed on an infinite 2D canvas.
+
+Key Conceptual Breakthrough:
+- Linear Chat Problem: If a user wishes to explore an alternative hypothesis,
+  clarify an earlier point, or test multiple prompts from a shared baseline,
+  a linear chat forces the user to either rewrite the history, pollute the
+  conversation context window with off-topic turns, or start an entirely new chat
+  from scratch, losing all previous context.
+- Tree Chatbot Solution: Conversations can fork at any node. Each node acts as an
+  independent conversational milestone. When a message is sent from any node,
+  the backend dynamically traverses the ancestor hierarchy to synthesize the
+  exact historical context leading to that node, while isolating all sibling and
+  cousin branches.
+
+
+2. THEORETICAL & COMPUTER SCIENCE FOUNDATIONS
+--------------------------------------------------------------------------------
+
+A. GRAPH THEORY & DATA STRUCTURES:
+   1. Adjacency List Tree Model:
+      - Every conversational card is represented as a vertex (V) in a directed tree.
+      - Each node maintains a direct pointer to its parent (`parentId`).
+      - A root node has `parentId = null` and points to itself as `rootId`.
+      - Children are directed edges: Edge E = (Parent, Child).
+   2. Ancestor Path Traversal (Bottom-Up Traversal):
+      - To generate the context for node N_k, the system executes an ancestor walk:
+        Path(N_0, N_k) = [N_0, N_1, ..., N_k] where N_0 is the root node.
+      - Traversal Complexity: O(d) time and O(d) space, where d is the depth of
+        the node from the root (typically d << total nodes in tree).
+   3. Subtree Exploration via Breadth-First Search (BFS):
+      - For cascade operations (e.g., deleting a tree, copying a nested folder
+        hierarchy, checking descendant counts), the backend uses a BFS frontier
+        queue:
+          frontier = [start_id]
+          while frontier not empty:
+             children = find(parentId in frontier)
+             frontier = children.ids
+      - Traversal Complexity: O(V + E) across the target subgraph.
+   4. Acyclic Invariant & Cycle Prevention:
+      - In folder reorganization, a folder cannot be moved into itself or one of
+        its own descendants.
+      - The backend computes the complete descendant set of the moving folder via
+        BFS and validates that `targetParentFolderId NOT IN descendantIds`.
+
+B. CONTEXT WINDOW SYNTHESIS & STATE-SPACE EXPLORATION:
+   1. State Space Branching:
+      - Let a dialogue state S_t be defined by the sequence of messages up to turn t.
+      - In standard LLM interactions: S_0 -> S_1 -> S_2 -> ... -> S_t.
+      - In Tree Chatbot, S_t can spawn multiple child states:
+          S_t -> S_{t+1, A} (Hypothesis A)
+          S_t -> S_{t+1, B} (Hypothesis B)
+   2. Dynamic History Flattening:
+      - The backend queries the ancestor chain: [Root, Node_1, ..., TargetNode].
+      - It flattens all `messages` arrays inside these nodes sequentially:
+        Full_Context = concat(Root.messages, Node_1.messages, ..., TargetNode.messages).
+      - This creates a completely isolated context window for the LLM. Sibling
+        branches (Hypothesis B) never leak into Hypothesis A.
+
+C. FAULT TOLERANCE & DISTRIBUTED LLM RESILIENCE:
+   1. Cascading Fallback Chain (Graceful Degradation):
+      - High-traffic LLMs frequently experience HTTP 429 (Rate Limit), 503 (Overload),
+        or 504 (Gateway Timeout).
+      - Tree Chatbot implements a fallback pipeline:
+        Primary Model (e.g., gemini-3.8-flash)
+          ↓ (fails with 429/500/503/504)
+        Secondary Model (e.g., gemini-3.6-flash)
+          ↓
+        Tertiary Model (e.g., gemini-3.5-flash-lite)
+          ↓
+        Quaternary Model (e.g., gemini-3.1-flash-lite)
+   2. Timeout Budgeting:
+      - The gateway allocates a global deadline (TOTAL_MS = 180s).
+      - Intermediate attempts receive an attempt budget (ATTEMPT_MS = 60s).
+      - If remaining time < 10s, subsequent attempts are aborted to prevent
+        unnecessary hanging.
+   3. Backpressure & Client Disconnect Cancellation:
+      - If the user aborts a prompt in the frontend (clicks Stop) or closes the tab,
+        the HTTP client socket disconnects.
+      - Express detects `res.on('close')` and triggers an `AbortController.abort()`.
+      - The active `fetch` to Google/Anthropic/OpenAI is immediately terminated,
+        saving API tokens and server sockets.
+
+
+3. BACKEND ARCHITECTURE & IMPLEMENTATION
+--------------------------------------------------------------------------------
+
+A. TECHNOLOGY STACK:
+   - Runtime: Node.js (CommonJS)
+   - Web Framework: Express.js 5.x
+   - Database: MongoDB via Mongoose ORM
+   - Network Transport: RESTful JSON over HTTP, CORS enabled
+   - Provider Integrations: Direct Native HTTP Fetch to LLM REST APIs
+
+B. DATABASE SCHEMAS & DENORMALIZATION STRATEGY:
+
+   1. `Node` Schema (`server/models/Node.js`):
+      - `_id`: ObjectId (Primary key)
+      - `parentId`: ObjectId (Ref to parent Node; null for root nodes) [Indexed]
+      - `rootId`: ObjectId (Ref to root Node of the conversation) [Indexed]
+      - `folderId`: ObjectId (Ref to Folder; populated on root nodes) [Indexed]
+      - `title`: String (Node label; auto-generated from 1st message or edited)
+      - `branchLabel`: String (Annotated edge label displayed on the canvas line)
+      - `provider`: String ('gemini' | 'anthropic' | 'openai' | 'grok')
+      - `model`: String (Specific model identifier)
+      - `position`: { x: Number, y: Number } (Canvas visual coordinates)
+      - `messages`: Array of Subdocuments:
+          - `role`: 'user' | 'model'
+          - `text`: String
+          - `model`: String (Records the exact model that generated this turn)
+          - `createdAt`: Date
+
+      *Design Insight - The `rootId` Optimization:*
+      Although trees can theoretically be queried purely via `parentId`, storing
+      `rootId` on every node provides an O(1) query to fetch an entire canvas tree
+      (`Node.find({ rootId })`) in a single query without recursive database joins
+      or multiple roundtrips.
+
+   2. `Folder` Schema (`server/models/Folder.js`):
+      - `_id`: ObjectId
+      - `name`: String
+      - `parentFolderId`: ObjectId (Ref to parent Folder; null for root folders)
+      Supports arbitrary nested folder structures for workspace organization.
+
+C. CORE BACKEND ROUTING & LOGIC:
+
+   1. Dialogue Execution (`POST /api/chat`):
+      - Extracts `x-api-key` from headers (Zero-knowledge BYOK architecture).
+      - Instantiates an `AbortController` linked to `res.on('close')`.
+      - Loads the current node or initializes a new root node.
+      - Appends the incoming user message to `node.messages`.
+      - Executes `getFullContext(node)`:
+          - Bottom-up while loop: `while (curr.parentId) curr = findById(curr.parentId)`
+          - Reverses list to obtain Root-to-Leaf chronological order.
+          - Flattens all historical messages into a contiguous array.
+      - Dispatches request via `callModel(provider, apiKey, model, fullContext)`.
+      - Handles automatic fallback (if Gemini) or provider normalization.
+      - Saves the model's response back to `node.messages`.
+      - Returns the updated node, `usedModel`, and `fellBack` boolean to the UI.
+
+   2. Branching Engine (`POST /api/branch`):
+      - Receives `parentNodeId` and optional `branchLabel`.
+      - Verifies existence of the parent node.
+      - Calculates sibling index: `siblings = countDocuments({ parentId: parent._id })`.
+      - Creates a child node inheriting the parent's `rootId`, `provider`, and `model`.
+      - Dynamically positions the new card on the canvas:
+          x = parent.position.x + 460
+          y = parent.position.y + siblings * 520
+      - Persists and returns the new leaf node ready for user input.
+
+   3. Deep Hierarchy Copying (`POST /api/folders/:id/copy` & `POST /api/node/:id/copy`):
+      - Solving the Graph Re-pointing Problem:
+        When an entire tree or folder hierarchy is copied, every node and folder must
+        receive a new ObjectId, but all internal parentId, rootId, and folderId
+        references must point to the *newly copied IDs*, not the old ones.
+      - Implementation:
+        a. Query all target nodes/folders via BFS.
+        b. Create an ID Translation Map: `Map<OldObjectId, NewObjectId>`.
+        c. Map all entities:
+           new_node._id = idMap.get(old._id)
+           new_node.parentId = idMap.get(old.parentId)
+           new_node.rootId = idMap.get(old.rootId)
+        d. Batch insert using `Node.insertMany()` / `Folder.insertMany()`.
+        e. If any step fails, an atomic rollback cleans up orphan records.
+
+   4. Safe Deletion & Structural Integrity (`DELETE /api/node/:id`):
+      - Restricts deletion: only leaf nodes (`childCount === 0`) can be deleted.
+      - Prevents orphaned subtrees and broken ancestor chains.
+      - Returning `newTipId = node.parentId` allows the UI to automatically shift
+        focus back to the preceding conversational milestone.
+
+   5. Multi-Provider Normalization Layer (`server/services/providers.js`):
+      - Adapts the unified internal format `{ role: 'user' | 'model', text }`
+        to heterogeneous external specifications:
+          * Gemini: `{ systemInstruction, contents: [{ role: 'user'|'model', parts: [{ text }] }] }`
+          * OpenAI / Grok: `{ messages: [{ role: 'system'|'user'|'assistant', content }] }`
+          * Anthropic Claude: `{ system, messages: [{ role: 'user'|'assistant', content }] }`
+      - System Prompt Enforcement: Enforces plain text math/chemistry formatting
+        and prohibits LaTeX/dollar-signs to maintain clean canvas card rendering.
+
+
+4. SUMMARY OF SYSTEM ADVANTAGES OVER CONVENTIONAL CHATBOTS
+--------------------------------------------------------------------------------
+1. Non-Destructive Ideation: Branching allows users to test prompts and explore
+   tangents without losing original conversation paths.
+2. Token & Context Hygiene: Each branch only carries the context of its direct
+   ancestors. Unrelated side discussions on sibling nodes do not inflate LLM
+   context limits or degrade output quality.
+3. High Availability: The multi-tiered Gemini fallback chain and multi-provider
+   architecture insulate users from vendor rate limits and downtime.
+4. Granular Spatial Organization: Users can spatially organize concepts on an
+   interactive 2D graph rather than scrolling through endless text feeds.
+================================================================================

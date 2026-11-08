@@ -2,8 +2,13 @@ import ProviderMenu from './ProviderMenu';
 import ModelField from './ModelField';
 import KeyChip from './KeyChip';
 import ThemeToggle from './ThemeToggle';
+import MobileTopBar from './MobileTopBar';
+import { MOBILE_QUERY, useMediaQuery } from '../hooks/useMediaQuery';
 
 function TopBar() {
+  const isMobile = useMediaQuery(MOBILE_QUERY);
+  if (isMobile) return <MobileTopBar />;
+
   return (
     <header className="topbar">
       <div className="topbar-left">

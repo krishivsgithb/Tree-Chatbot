@@ -2,12 +2,14 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { WorkspaceContext } from './workspaceContext';
 import { api } from '../api/client';
 import { descendantIds } from '../utils/workspaceTree';
+import { useUI } from '../hooks/useUI';
 
 const ACTIVE_KEY = 'activeRootId';
 let toastSeq = 0;
 const same = (a, b) => (a || null) === (b || null);
 
 export function WorkspaceProvider({ children }) {
+  const { closeDrawer } = useUI();
   const [folders, setFolders] = useState([]);
   const [chats, setChats] = useState([]);
   const [status, setStatus] = useState('loading'); // loading | ready | error
@@ -57,8 +59,9 @@ export function WorkspaceProvider({ children }) {
     load();
   };
 
-  const select = (id) => {
+    const select = (id) => {
     setActiveId(id);
+    closeDrawer();
     try {
       if (id) localStorage.setItem(ACTIVE_KEY, id);
       else localStorage.removeItem(ACTIVE_KEY);

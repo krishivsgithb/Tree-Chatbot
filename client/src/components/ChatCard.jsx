@@ -5,7 +5,7 @@ import { AlertTriangle, ArrowUp, GitBranch, Lock, Sparkles, Square, Trash2 } fro
 import { PROVIDERS } from '../config/providers';
 import { useChain } from '../hooks/useChain';
 
-function ChatCard({ id, data, selected }) {
+function ChatCard({ id, data, selected, standalone = false }) {
   const { nodes, send, stop, branch, rename, setDraft, requestDelete } = useChain();
   const scroller = useRef(null);
   const cancelled = useRef(false);
@@ -47,7 +47,9 @@ function ChatCard({ id, data, selected }) {
 
   return (
     <div className={`chat-card ${selected ? 'selected' : ''}`}>
-      {data.parentId && <Handle type="target" position={Position.Left} isConnectable={false} />}
+            {!standalone && data.parentId && (
+        <Handle type="target" position={Position.Left} isConnectable={false} />
+      )}
 
       <div className="card-inner">
         <header className="card-head">
@@ -190,7 +192,9 @@ function ChatCard({ id, data, selected }) {
         </footer>
       </div>
 
-      {children > 0 && <Handle type="source" position={Position.Right} isConnectable={false} />}
+            {!standalone && children > 0 && (
+        <Handle type="source" position={Position.Right} isConnectable={false} />
+      )}
     </div>
   );
 }

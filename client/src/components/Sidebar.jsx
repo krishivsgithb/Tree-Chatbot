@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
-import { FolderPlus, Network, Plus, ShieldCheck, SlidersHorizontal } from 'lucide-react';
+import { FolderPlus, Network, Plus, ShieldCheck, SlidersHorizontal, X } from 'lucide-react';
+import { useUI } from '../hooks/useUI';
 import { useWorkspace } from '../hooks/useWorkspace';
 import { buildTree } from '../utils/workspaceTree';
 import FolderNode from './FolderNode';
@@ -31,6 +32,7 @@ function Sidebar() {
   const recent = chats.slice(0, 3);
   const isEmpty = tree.folders.length === 0 && tree.chats.length === 0;
   const ready = status === 'ready';
+  const { drawerOpen, closeDrawer } = useUI();
 
   // Shortcuts work while a chat or folder row has keyboard focus
   const onTreeKeyDown = (e) => {
@@ -67,7 +69,10 @@ function Sidebar() {
   };
 
   return (
-    <aside className="sidebar">
+        <aside className={`sidebar ${drawerOpen ? 'drawer-open' : ''}`}>
+      <button type="button" className="drawer-close" aria-label="Close menu" onClick={closeDrawer}>
+        <X size={18} />
+      </button>
       <div className="brand">
         <span className="brand-logo">
           <Network size={18} />

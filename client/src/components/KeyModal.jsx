@@ -4,7 +4,7 @@ import { PROVIDERS } from '../config/providers';
 import { useSettings } from '../hooks/useSettings';
 
 function KeyModalBody({ providerId, onClose }) {
-  const { keys, models, saveKey, setModel } = useSettings();
+    const { keys, models, saveKey, setModel, removeKey } = useSettings();
   const cfg = PROVIDERS[providerId];
   const Icon = cfg.icon;
 
@@ -103,6 +103,18 @@ function KeyModalBody({ providerId, onClose }) {
         </div>
 
         <div className="modal-actions">
+                    {keys[providerId] && (
+            <button
+              type="button"
+              className="btn remove-key"
+              onClick={() => {
+                removeKey(providerId);
+                onClose();
+              }}
+            >
+              Remove key
+            </button>
+          )}
           <button type="button" className="btn btn-outline" onClick={onClose}>
             Cancel
           </button>

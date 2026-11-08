@@ -1,5 +1,5 @@
 import { ReactFlowProvider } from '@xyflow/react';
-import CanvasFlow from './CanvasFlow';
+import CanvasView from './CanvasView';
 import { ChainProvider } from '../context/ChainProvider';
 import { useWorkspace } from '../hooks/useWorkspace';
 
@@ -14,7 +14,7 @@ function Canvas() {
   return (
     <ReactFlowProvider>
       <ChainProvider key={activeRootId} rootId={activeRootId}>
-        <CanvasFlow />
+        <CanvasView />
       </ChainProvider>
     </ReactFlowProvider>
   );
